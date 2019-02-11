@@ -1,5 +1,7 @@
-#Configure enviroment 
+# Configure enviroment 
+
 **Install Anaconda**
+
 https://docs.anaconda.com/anaconda/install/
 
 **Python 3.7**
@@ -19,12 +21,15 @@ https://docs.anaconda.com/anaconda/install/
 * pip install dengraph
 * conda install -c conda-forge -c pkgw-forge -c ostrokach-forge --yes graph-tool
 * sudo gdk-pixbuf-query-loaders --update-cache
-#Check enviroment
+
+# Check enviroment
+
 * python manage.py -a kores -i data/netscience.graphml -k 5 -comp
 * python manage.py -a dengraph -eps 1 -mu 1 -i data/netscience.graphml -k 5 -comp
 * python manage.py -h
 
-#Control enviroment
+# Control enviroment
+
 **Activate**
 * source activate kgraph
 
