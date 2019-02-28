@@ -97,3 +97,30 @@ def paint_graph(path, graph, communities):
         gt.graph_draw(network, pos=pos, vertex_fill_color=color, output=os.path.join(folder, 'graph-communities.svg'))
         sys.stdout.write('Ok!\n')
         sys.stdout.flush()
+
+
+def paint_full_graph(path, graph, name):
+    if path:
+        sys.stdout.write('Drawing full graph ... ')
+        sys.stdout.flush()
+        network = gt.Graph(graph, directed=False)
+        gt.graph_draw(network, output=os.path.join(os.path.abspath(path), str(name) + '-graph.svg'))
+        sys.stdout.write('Ok!\n')
+        sys.stdout.flush()
+
+
+def paint_kcore(path, graph, name):
+    if path:
+        sys.stdout.write('Drawing kcore graph ... ')
+        sys.stdout.flush()
+        network = gt.Graph(graph, directed=False)
+        folder = os.path.abspath(path)
+
+        network = gt.GraphView(network, vfilt=gt.label_largest_component(network))
+        kcore = gt.kcore_decomposition(network)
+
+        pos = gt.sfdp_layout(network)
+        gt.graph_draw(network, pos=pos, vertex_fill_color=kcore, vertex_text=kcore,
+                      output=os.path.join(folder, str(name) + '-graph-kcore.svg'))
+        sys.stdout.write('Ok!\n')
+        sys.stdout.flush()
