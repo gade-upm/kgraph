@@ -19,16 +19,17 @@ class GRASP(Algorithm):
 
     def run(self):
         init = time.time()
+        ES = []
         # TODO: Stopping criterion
         while GRASP stopping criterion not satisfied:
             Candidates = self._createCandidateList()
-            communities = self._greedy_randomized_solution(Candidates)
-            communities = self._localSearch(communities)
-            bestCommunity = self._updateSolution(communities, bestCommunity)
+            solution = self._greedy_randomized_solution(Candidates)
+            solution = self._localSearch(solution)
+            ES = self._updateSolution(solution, ES)
         end = time.time()
         print('GRASP finished in {0} s.'.format(end - init))
 
-        bestCommunity = self._pathRelinking()
+        bestCommunity = self._pathRelinking(ES)
 
 
         return bestCommunity
@@ -91,13 +92,13 @@ class GRASP(Algorithm):
         """
 
     # TODO: Solution that is non dominated
-    def _updatesolution(self, communities, bestCommunity):
+    def _updateSolution(self, solution, ES):
         """
         Return the best communities
         :param communities, communities
         :return: bestCommunity
         """
-        return bestCommunity
+        return ES
 
     # TODO: From candidates, return the ones with good g(c)
     def _constructRCL(self, Candidates):
