@@ -19,10 +19,11 @@ class GRASP(Algorithm):
 
     def run(self):
         init = time.time()
-        seeds = self._seeds()
+        # TODO: Stopping criterion
         while GRASP stopping criterion not satisfied:
-            communities = self._greedy_randomized_solution(seeds)
-            communities = self._localsearch(communities)
+            Candidates = self._createCandidateList()
+            communities = self._greedy_randomized_solution(Candidates)
+            communities = self._localSearch(communities)
             bestCommunity = self._updateSolution(communities, bestCommunity)
         end = time.time()
         print('GRASP finished in {0} s.'.format(end - init))
@@ -32,25 +33,49 @@ class GRASP(Algorithm):
 
         return bestCommunity
 
+    # TODO: Define Candidates
+    def _createCandidateList(self):
+        """
+        CREATE C, with the candidate elements that can be added to the solution
+        :return:
+        """
+        Candidates = []
+        # TODO: Generate Candidates with the graph
+        return Candidates
 
-    def _greedy_randomized_solution(self):
-        t0 = time.time()
+
+    def _greedy_randomized_solution(self, Candidates):
+
+        # TODO: Initialize solution
+
+        # TODO: Define complete
         while is not complete:
-            RCL = self._constructRCL() # Greedy
+            # TODO: Restricted for multi-objetive?
+            RCL = self._constructRCL(Candidates) # Greedy
             s = random.choice(RCL)# Probabilistic
-            add s to solution
-            Reevaluate the incremental cost # Adaptative aspect
 
-        t = time.time()
-        sys.stdout.write(' Ok! ({0} s.)\n'.format(t - t0))
+            # TODO: Add solution
+            Candidates = self._updateCandidateList(Candidates) #Adaptative
         return solution
 
+
+    # TODO: Define Candidates
+    def _updateCandidateList(self, Candidates):
+        """
+        UPDATE C, with the candidate elements that can be added to the solution
+        :return:
+        """
+        Candidates = []
+        # TODO: Generate Candidates with the graph
+        return Candidates
+
+    # TODO: Local search global _improve_seeds
     def _localSearch(self, seeds):
-        '''
+        """
         Local Search algorithm
         :return: local optima solution
-        '''
-
+        """
+        # TODO: Define localOptimal
         while is not localltOptimal:
             # Find solution that is better
             solution = super._improve_seeds(seeds)
@@ -58,32 +83,32 @@ class GRASP(Algorithm):
         return solution
 
 
+    # TODO: Path Relinking
     def _pathRelinking(self, seeds):
-        '''
+        """
         Intensification
         :return:
-        '''
+        """
 
-    def _updateSolution(self, communities, bestCommunity):
-        '''
+    # TODO: Solution that is non dominated
+    def _updatesolution(self, communities, bestCommunity):
+        """
         Return the best communities
         :param communities, communities
         :return: bestCommunity
-        '''
+        """
         return bestCommunity
 
-
-    def _constructRCL(self):
-        '''
+    # TODO: From candidates, return the ones with good g(c)
+    def _constructRCL(self, Candidates):
+        """
         Construct Restricted candidate list
         :return: RCL
-        '''
+        """
+        RCL = []
+        for c in Candidates:
+            # TODO: define function g(c)
+            if g(c) has a good value:
+                RCL.append(c)
 
         return RCL
-
-    def _seeds(self):
-        '''
-        Generate Seeds for GRASP
-        :return:
-        '''
-        return initialSeed
