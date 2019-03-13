@@ -21,8 +21,7 @@ class GRASP(Algorithm):
 
         self._cohesion_factor = 0.8  # For kores_alg
         self.ES = []
-        self.nondominatedI = []
-        self.nondominatedC = []
+        self.nondominated = []
 
         super(GRASP, self).__init__('GRASP', graph, output)
 
@@ -47,11 +46,6 @@ class GRASP(Algorithm):
         end = time.time()
         print('GRASP finished in {0} s.'.format(end - init))
 
-        from matplotlib import pyplot as plt
-        plt.scatter(self.nondominatedI, self.nondominatedC)
-        plt.show()
-
-
         init = time.time()
         bestCommunity = self._pathRelinking()
         end = time.time()
@@ -70,7 +64,8 @@ class GRASP(Algorithm):
         :return:
         """
         from matplotlib import pyplot as plt
-        plt.scatter(self.nondominatedI, self.nondominatedC)
+        x, y = zip(*self.nondominated)
+        plt.scatter(x, y)
 
         font = {'family': 'serif',
                 'color': 'darkred',
@@ -79,8 +74,10 @@ class GRASP(Algorithm):
                 }
 
         plt.title('Non Dominated', fontdict=font)
-        plt.xlabel('time (s)', fontdict=font)
-        plt.ylabel('voltage (mV)', fontdict=font)
+        plt.xlabel('Isolation', fontdict=font)
+        plt.ylabel('Cohesion', fontdict=font)
+        plt.savefig('./test/Non_Dominated.png')
+
         plt.show()
         paint_graph('test/', self._network, bestCommunity)
 
@@ -123,7 +120,7 @@ class GRASP(Algorithm):
 
                 # TODO: Remove candidate
                 candidates.remove(candidate)
-                #candidates = self._candidateList(communities, candidates)  # Adaptative
+                # candidates = self._candidateList(communities, candidates)  # Adaptative
         return communities
 
     def _localSearch(self, seed):
@@ -147,36 +144,27 @@ class GRASP(Algorithm):
     def _updateSolution(self, solution):
         """
         Return the best communities
-        :param communities, communities
+        :param solution
         """
-        Ia, Ic = self._compute_results(solution)
-        dominated = False
 
-        # if ES is empty
-        if not self.ES:
-            dominated = True
+        isolation, cohesion = self._compute_results(solution)
+        nondominated = True
 
-        # TODO: NoN Dominated check
         for idx, e in enumerate(self.ES):
-            if self.nondominatedI[idx] < Ia or self.nondominatedC[idx] < Ic:
-                dominated = True
-                if self.nondominatedI[idx] < Ia and self.nondominatedC[idx] < Ic \
-                        or self.nondominatedI[idx] <= Ia and self.nondominatedC[idx] < Ic\
-                        or self.nondominatedI[idx] < Ia and self.nondominatedC[idx] <= Ic:
-                    print(len(self.ES))
+            if self.nondominated[idx][0] > isolation and self.nondominated[idx][1] > cohesion:
+                nondominated = False
+                break
+
+        if nondominated:
+            # Remove dominated elements
+            for idx, e in enumerate(self.ES):
+                if self.nondominated[idx][0] < isolation and self.nondominated[idx][1] < cohesion:
                     self.ES.pop(idx)
-                    self.nondominatedI.pop(idx)
-                    self.nondominatedC.pop(idx)
-                    print(len(self.ES))
-
-        if dominated:
+                    self.nondominated.pop(idx)
             self.ES.append(solution)
-            self.nondominatedI.append(Ia)
-            self.nondominatedC.append(Ic)
+            self.nondominated.append([isolation, cohesion])
 
-
-
-    # TODO: From candidates, return the ones with good g(c)
+        # TODO: From candidates, return the ones with good g(c)
     def _constructRCL(self, candidates, communities):
         """
         Construct Restricted candidate list
@@ -215,7 +203,7 @@ class GRASP(Algorithm):
         """
         Compute means of Isolation and Cohesion
         :param communities:
-        :return: Ia, Ic
+        :return: isolation, cohesion
         """
         values = []
         for idx, community in enumerate(communities):
@@ -223,10 +211,10 @@ class GRASP(Algorithm):
             ic = cohesion_index(self._network, community)
             values.append((len(community), ia, ic))
 
-        Ia = np.mean([v[1] for v in values])
-        Ic = np.mean([v[2] for v in values])
+        isolation = np.mean([v[1] for v in values])
+        cohesion = np.mean([v[2] for v in values])
 
-        return Ia, Ic
+        return isolation, cohesion
 
     def _paint_seeds(self, seeds):
         """
