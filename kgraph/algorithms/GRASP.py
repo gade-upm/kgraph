@@ -1,10 +1,13 @@
 import random
+import sys
 import time
 import numpy as np
+import randomcolor
+import os.path
+
 from kgraph.algorithms import Algorithm
 from kgraph.utils.graph import isolation_index, cohesion_index
 import graph_tool.all as gt
-
 from kgraph.utils.graph import paint_graph
 
 
@@ -20,26 +23,27 @@ class GRASP(Algorithm):
     def __init__(self, graph, output):
 
         self._cohesion_factor = 0.8  # For kores_alg
+        self.alpha = 0.5  # Alpha for selecting best in Restricted Candidate List
         self.ES = []
-        self.nondominated = []
-
+        self.nondominated
+        self.max_iterations = 10
         super(GRASP, self).__init__('GRASP', graph, output)
 
     def run(self, draw_graph=None):
         init = time.time()
         seeds = self._seeds()
 
-        if draw_graph:
+        if False:
             self._paint_seeds(seeds)
 
         for seed in seeds:
             # TODO: Stopping criterion
-            # while GRASP stopping criterion not satisfied:
-            count = 0
-            while count < 1:
-                count = count + 1
+            # Max iterations
+            for i in range(self.max_iterations):
                 candidates = self._candidateList(seed)
-                solution = self._greedy_randomized_solution(seed, candidates)
+                if not candidates:
+                    break
+                solution, candidates = self._greedy_randomized_solution(seed, candidates)
                 solution = self._localSearch(solution)
                 self._updateSolution(solution)
 
@@ -47,39 +51,16 @@ class GRASP(Algorithm):
         print('GRASP finished in {0} s.'.format(end - init))
 
         init = time.time()
-        bestCommunity = self._pathRelinking()
+        # TODO: Path Relinking
+        nondominated_communities = self.ES
+        # nondominated_communities = self._pathRelinking()
         end = time.time()
         print('Path RElinking finished in {0} s.'.format(end - init))
 
         if draw_graph:
-            self._paint_communities(bestCommunity)
+            self._paint_communities(nondominated_communities)
 
-        return bestCommunity
-
-    def _paint_communities(self, bestCommunity):
-        """
-        Paint all Graphs in ES
-        :param ES:
-        :param nondominated:
-        :return:
-        """
-        from matplotlib import pyplot as plt
-        x, y = zip(*self.nondominated)
-        plt.scatter(x, y)
-
-        font = {'family': 'serif',
-                'color': 'darkred',
-                'weight': 'normal',
-                'size': 16,
-                }
-
-        plt.title('Non Dominated', fontdict=font)
-        plt.xlabel('Isolation', fontdict=font)
-        plt.ylabel('Cohesion', fontdict=font)
-        plt.savefig('./test/Non_Dominated.png')
-
-        plt.show()
-        paint_graph('test/', self._network, bestCommunity)
+        return nondominated_communities
 
     def _candidateList(self, seed):
         """
@@ -107,21 +88,27 @@ class GRASP(Algorithm):
         # TODO: Define complete
         # while is not complete:
         count = 0
-        while count < 2:
+        while count < 1:
             count = count + 1
 
-            # TODO: Restricted for multi-objetive?
-            RCL = self._constructRCL(candidates, communities)  # Greedy
-            if RCL:
-                candidate = random.choice(RCL)  # Probabilistic
+            # Restricted for multi-objetive
+            rcl, rcl_ids = self._constructRCL(candidates, communities)  # Greedy
+            if rcl:
+                # Random selection
+                random_number = random.randrange(len(rcl))
+                candidate = rcl[random_number]
+                idc = rcl_ids[random_number]
 
-                # TODO: Add solution
-                communities[:] = communities + [candidate]
+                # Add solution
+                communities[idc].append(candidate)
 
-                # TODO: Remove candidate
-                candidates.remove(candidate)
-                # candidates = self._candidateList(communities, candidates)  # Adaptative
-        return communities
+                # Remove candidate
+                candidates.remove(candidate)  # Adaptative, we remove and then recalculate them
+                if not candidates:
+                    break
+            else:
+                break
+        return communities, candidates
 
     def _localSearch(self, seed):
         """
@@ -133,55 +120,103 @@ class GRASP(Algorithm):
 
         return communities
 
-    # TODO: Path Relinking
     def _pathRelinking(self):
         """
         Intensification
         :return:
         """
-        return random.choice(self.ES)
+        nondominated = []
+
+        for idx, e in enumerate(self.ES):
+            for idx2, e2 in enumerate(self.ES):
+                if idx != idx2:
+                    # TODO: Path Relinking
+                    solution = self._apply_pathRelinking(e, e2)
+                    # Add only non dominated solutions
+                    nondominated = self._add_non_dominated(nondominated, solution)
+
+        return nondominated
+
+    # TODO: Path Relinking
+    def _apply_pathRelinking(self, x, y):
+
+        return x
+
+    def _add_non_dominated(self, nondominated, solution):
+        """
+        Add non dominated solution and remove dominated
+        :param nondominated:
+        :param solution:
+        :return: ES, nondominated
+        """
+        isolation, cohesion = self._compute_results(solution)
+        non_dominated = True
+
+        for non in nondominated:
+            if non[0] > isolation and non[1] > cohesion:
+                non_dominated = False
+                break
+
+        if non_dominated:
+            # Remove dominated elements
+            for idx, non in enumerate(nondominated):
+                if non[0] < isolation and non[1] < cohesion:
+                    nondominated.pop(idx)
+            nondominated.append([isolation, cohesion])
+        return nondominated
 
     def _updateSolution(self, solution):
         """
-        Return the best communities
+        Add communities
         :param solution
         """
+        self.ES.append(solution)
+        # self.nondominated.append([self._compute_results(solution)])
 
-        isolation, cohesion = self._compute_results(solution)
-        nondominated = True
-
-        for idx, e in enumerate(self.ES):
-            if self.nondominated[idx][0] > isolation and self.nondominated[idx][1] > cohesion:
-                nondominated = False
-                break
-
-        if nondominated:
-            # Remove dominated elements
-            for idx, e in enumerate(self.ES):
-                if self.nondominated[idx][0] < isolation and self.nondominated[idx][1] < cohesion:
-                    self.ES.pop(idx)
-                    self.nondominated.pop(idx)
-            self.ES.append(solution)
-            self.nondominated.append([isolation, cohesion])
-
-        # TODO: From candidates, return the ones with good g(c)
     def _constructRCL(self, candidates, communities):
         """
-        Construct Restricted candidate list
-        :return: RCL
+        Construct Restricted candidate list with the best of both objetives(Isolation and cohesion)
+        :return: RCL, rcl_ids_community
         """
-        RCL = []
+        rcl = []  # Restricted candidate list
+        rcl_ids_community = []  # Id community
+        possibles = []
+        possibles_id = []
+        g_isolation = []
+        g_cohesion = []
 
-        for communitie in communities:
-            for vertex in communitie:
-                vertex
+        for candidate in candidates:
+            for id_community, community in enumerate(communities):
+                new_community = community + [candidate]
+                # Index of the new communities
+                g_isolation.append(isolation_index(new_community))
+                g_cohesion.append(cohesion_index(self._network, new_community))
+                possibles.append(candidate)
+                possibles_id.append(id_community)
 
-        # for c in candidates:
-        # TODO: define function g(c)
-        # g =
-        # if g(c) has a good value:
-        #    RCL.append(c)
-        return RCL
+        # Select min/max for add to RCL the best candidates
+        g_min_isolation = min(g_isolation)
+        g_max_isolation = min(g_isolation)
+
+        limit_g_isolation = g_min_isolation + self.alpha * (g_max_isolation - g_min_isolation)
+
+        # Select min/max for add to RCL the best candidates
+        g_min_cohesion = min(g_cohesion)
+        g_max_cohesion = max(g_cohesion)
+
+        # g(c) formula
+        limit_g_cohesion = g_min_cohesion + self.alpha * (g_max_cohesion - g_min_cohesion)
+
+        for id_candidate, localg in enumerate(g_cohesion):
+            if localg <= limit_g_cohesion:
+                rcl.append(possibles[id_candidate])
+                rcl_ids_community.append(possibles_id[id_candidate])
+            # Can be added two times if is good in the two objetives
+            if g_isolation[id_candidate] <= limit_g_isolation:
+                rcl.append(possibles[id_candidate])
+                rcl_ids_community.append(possibles_id[id_candidate])
+
+        return rcl, rcl_ids_community
 
     def _seeds(self):
         """
@@ -216,15 +251,44 @@ class GRASP(Algorithm):
 
         return isolation, cohesion
 
+    def _paint_communities(self, nondominated_communities):
+        """
+        Paint all Graphs in ES
+        :param ES:
+        :param nondominated:
+        :return:
+
+        """
+        '''
+        from matplotlib import pyplot as plt
+
+        x, y = zip(*self.nondominated)
+        plt.scatter(x, y)
+
+        font = {'family': 'serif',
+                'color': 'darkred',
+                'weight': 'normal',
+                'size': 16,
+                }
+
+        plt.title('Non Dominated', fontdict=font)
+        plt.xlabel('Isolation', fontdict=font)
+        plt.ylabel('Cohesion', fontdict=font)
+        plt.savefig('./test/Non_Dominated.png')
+        plt.show()
+        '''
+        for idx, communities in enumerate(nondominated_communities):
+            self.paint_graph('test/', str(idx), self._network, communities)
+
     def _paint_seeds(self, seeds):
         """
-        Paint different cluster seeds
+        Paint different communities from seeds
         :param seeds:
         :return:
         """
-        for i, seed in enumerate(seeds):
-            for idx, s in enumerate(seed):
-                self.paint(s, idx + i * 10)
+        for i, communities in enumerate(seeds):
+            for idx, community in enumerate(communities):
+                self.paint(community, idx + i * 10)
 
     def _components(self, k, kcores, network):
         network_cpy = network.copy()
@@ -238,7 +302,7 @@ class GRASP(Algorithm):
         network_cpy.purge_vertices()
 
         labels, hist = gt.label_components(network_cpy, directed=False)
-        components = self.__group_labels(labels, network_cpy)
+        components = self._group_labels(labels, network_cpy)
 
         mapped = self._map_vertexs(network_cpy, components)
 
@@ -250,7 +314,7 @@ class GRASP(Algorithm):
 
         return components
 
-    def __group_labels(self, labels, graph):
+    def _group_labels(self, labels, graph):
         labels_arr = labels.a
         uniques = np.unique(labels_arr)
         components = []
@@ -306,3 +370,29 @@ class GRASP(Algorithm):
         isolated = [self._network.vertex(v) for v in all_vertices if v in all_vertices and v not in vertices]
 
         return isolated
+
+    def paint_graph(self, path, location, graph, communities):
+        if path:
+            sys.stdout.write('Drawing graph ... ')
+            sys.stdout.flush()
+            network = gt.Graph(graph, directed=False)
+            folder = os.path.abspath(path)
+            # colors = random.sample(range(100,151), len(communities))
+            r_cols = randomcolor.RandomColor().generate(count=len(communities) + 1)
+            colors = [list(int(r_col[1:][i:i + 2], 16) for i in (0, 2, 4)) for r_col in r_cols]
+
+            # color = graph.new_vertex_property('vector<float>')
+            color = network.new_vertex_property('int')
+
+            base_color = colors.pop()
+            for v in network.vertices():
+                color[v] = (base_color[0] << 16) + (base_color[1] << 8) + base_color[2]
+            for community in communities:
+                c = colors.pop()
+                for v in community:
+                    color[v] = (c[0] << 16) + (c[1] << 8) + c[2]
+            pos = gt.sfdp_layout(network)
+            gt.graph_draw(network, pos=pos, vertex_fill_color=color,
+                          output=os.path.join(folder, location + 'graph-communities.svg'))
+            sys.stdout.write('Ok!\n')
+            sys.stdout.flush()
