@@ -25,7 +25,6 @@ class GRASP(Algorithm):
         self._cohesion_factor = 0.8  # For kores_alg
         self.alpha = 0.5  # Alpha for selecting best in Restricted Candidate List
         self.ES = []
-        self.nondominated
         self.max_iterations = 10
         super(GRASP, self).__init__('GRASP', graph, output)
 
