@@ -1,9 +1,9 @@
 import os.path
 import sys
 import time
-import randomcolor
-import numpy as np
 
+import numpy as np
+import randomcolor
 from graph_tool import all as gt
 
 

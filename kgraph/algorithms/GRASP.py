@@ -24,14 +24,14 @@ class GRASP(Algorithm):
     Intensification Path Relinking
     """
 
-    def __init__(self, graph, output):
+    def __init__(self, graph, output, alpha):
 
         self._cohesion_factor = 0.8  # For kores_alg
-        self.alpha = 0.6  # Alpha for selecting best in Restricted Candidate List
+        self.alpha = alpha  # Alpha for selecting best in Restricted Candidate List
         self.ES = []
         self.non_dominated = []
         self.non_dominated_id = []
-        self.max_times = 10  # Times to have same seed
+        self.max_times = 100  # Times to have same seed
         self.percentage_candidates = 0.2
         self.type_greedy = 'percentaje'  # percentaje, both, cohesion, isolation
 
@@ -54,8 +54,10 @@ class GRASP(Algorithm):
             candidates = self._candidate_list(seed)
             # Stopping criterion Max iterations
             for i in range(self.max_times):
+                '''
                 if not candidates:
                     break
+                '''
                 sol = self._greedy_randomized_solution(list(seed), list(candidates))
                 sol = self._local_search(sol)
                 self._update_solution(sol)
@@ -227,7 +229,7 @@ class GRASP(Algorithm):
         :param candidates:
         :return:
         """
-        old_ic = self._index_cohesion(self._network, communities)
+        old_ic = self._index_cohesion(communities)
 
         while True:
             # Restricted for multi-objetive
@@ -241,7 +243,7 @@ class GRASP(Algorithm):
 
                 # Mejora constante
                 communities[idc].append(candidate)
-                new_ic = self._index_cohesion(self._network, communities)
+                new_ic = self._index_cohesion(communities)
 
                 if not (old_ic < new_ic):
                     communities[idc].remove(candidate)
@@ -309,6 +311,7 @@ class GRASP(Algorithm):
         These sols generated are the combination off these pairs
         Return all non dominated sols of these combinations
         """
+        print(len(self.ES))
         # TODO: PARALELIZE
         for idx, x in enumerate(self.ES):
             # In pairs
@@ -328,15 +331,6 @@ class GRASP(Algorithm):
         dist_sol_id = []
         dist = []
 
-        # Before removing anything add x
-        '''
-        self._add_non_dominated(x)
-        '''
-        self.non_dominated.append(x)
-        '''
-        isolation, cohesion = self._index_values(x)
-        self.non_dominated_id.append([isolation, cohesion])
-        '''
         # Generate all different alternatives
         for id_community, community in enumerate(x):
             # To add, not in x but is in y
